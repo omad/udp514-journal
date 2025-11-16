@@ -14,7 +14,10 @@
       flake-utils,
       rust-overlay,
     }:
-    flake-utils.lib.eachDefaultSystem (
+    let
+      systems = flake-utils.lib.defaultSystems;
+    in
+    flake-utils.lib.eachSystem systems (
       system:
       let
         pkgs = import nixpkgs {
@@ -75,59 +78,61 @@
       {
         packages = allPackages;
 
-        # Provide a NixOS module
-        nixosModules.default =
-          {
-            config,
-            lib,
-            pkgs,
-            ...
-          }:
-          let
-            cfg = config.services.udp514-journal;
-          in
-          {
-            options.services.udp514-journal = {
-              enable = lib.mkEnableOption "udp514-journal service";
+      }
+    )
+    // {
+      # Provide a NixOS module
+      nixosModules.default =
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        let
+          cfg = config.services.udp514-journal;
+        in
+        {
+          options.services.udp514-journal = {
+            enable = lib.mkEnableOption "udp514-journal service";
 
-              package = lib.mkOption {
-                type = lib.types.package;
-                default = allPackages.default;
-                description = "The udp514-journal package to use.";
+            # package = lib.mkOption {
+            #   type = lib.types.package;
+            #   default = self.packagesallPackages.default;
+            #   description = "The udp514-journal package to use.";
+            # };
+          };
+
+          config = lib.mkIf cfg.enable {
+            systemd.services."udp514-journal" = {
+              description = "Forward syslog from network (udp/514) to journal";
+              requires = [
+                "systemd-journald.socket"
+                "udp514-journal.socket"
+              ];
+              after = [ "network.target" ];
+              wantedBy = [ "multi-user.target" ];
+
+              serviceConfig = {
+                Type = "notify";
+                Restart = "always";
+                ExecStart = "${cfg.package}/bin/udp514-journal";
+                DynamicUser = true;
+                ProtectSystem = "full";
+                ProtectHome = true;
+                PrivateDevices = true;
+                NoNewPrivileges = true;
               };
             };
 
-            config = lib.mkIf cfg.enable {
-              systemd.services."udp514-journal" = {
-                description = "Forward syslog from network (udp/514) to journal";
-                requires = [
-                  "systemd-journald.socket"
-                  "udp514-journal.socket"
-                ];
-                after = [ "network.target" ];
-                wantedBy = [ "multi-user.target" ];
-
-                serviceConfig = {
-                  Type = "notify";
-                  Restart = "always";
-                  ExecStart = "${cfg.package}/bin/udp514-journal";
-                  DynamicUser = true;
-                  ProtectSystem = "full";
-                  ProtectHome = true;
-                  PrivateDevices = true;
-                  NoNewPrivileges = true;
-                };
-              };
-
-              systemd.sockets."udp514-journal" = {
-                description = "Forward syslog from network (udp/514) to journal socket";
-                wantedBy = [ "sockets.target" ];
-                socketConfig = {
-                  ListenDatagram = "514";
-                };
+            systemd.sockets."udp514-journal" = {
+              description = "Forward syslog from network (udp/514) to journal socket";
+              wantedBy = [ "sockets.target" ];
+              socketConfig = {
+                ListenDatagram = "514";
               };
             };
           };
-      }
-    );
+        };
+    };
 }
