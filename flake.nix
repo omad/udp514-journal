@@ -48,7 +48,7 @@
 
       });
 
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      # nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
 
         # Provide a NixOS module
         nixosModules.default =
@@ -86,7 +86,7 @@
                 serviceConfig = {
                   Type = "notify";
                   Restart = "always";
-                  ExecStart = "${package}/bin/udp514-journal";
+                  ExecStart = "${self.packages.x86_64-linux.default}/bin/udp514-journal";
                   DynamicUser = true;
                   ProtectSystem = "full";
                   ProtectHome = true;
