@@ -7,8 +7,15 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      rust-overlay,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -20,10 +27,12 @@
           version = "0.2.1"; # From Makefile
           src = self;
 
+          nativeBuildInputs = [
+            pkgs.multimarkdown
+          ];
           buildInputs = with pkgs; [
             pkg-config
-            libsystemd
-            make
+            systemdLibs
           ];
 
           installPhase = ''
@@ -53,7 +62,7 @@
           };
 
           nativeBuildInputs = with pkgs; [ pkg-config ];
-          buildInputs = with pkgs; [ libsystemd ];
+          buildInputs = with pkgs; [ systemdLibs ];
         };
 
         allPackages = {
@@ -67,7 +76,13 @@
         packages = allPackages;
 
         # Provide a NixOS module
-        nixosModules.default = { config, lib, pkgs, ... }:
+        nixosModules.default =
+          {
+            config,
+            lib,
+            pkgs,
+            ...
+          }:
           let
             cfg = config.services.udp514-journal;
           in
@@ -85,7 +100,10 @@
             config = lib.mkIf cfg.enable {
               systemd.services."udp514-journal" = {
                 description = "Forward syslog from network (udp/514) to journal";
-                requires = [ "systemd-journald.socket" "udp514-journal.socket" ];
+                requires = [
+                  "systemd-journald.socket"
+                  "udp514-journal.socket"
+                ];
                 after = [ "network.target" ];
                 wantedBy = [ "multi-user.target" ];
 

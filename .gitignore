@@ -14,3 +14,6 @@ rust/target
 
 # Compiled binaries
 udp514-journal
+
+# Nix
+result
