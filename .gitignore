@@ -5,3 +5,12 @@ README.html
 version.h
 udp514-journal-*.tar.xz
 udp514-journal-*.tar.xz.asc
+
+# Go build artifact
+go/go
+
+# Rust build artifacts
+rust/target
+
+# Compiled binaries
+udp514-journal
